@@ -75,10 +75,18 @@ public class OddEvenAdapter extends SimpleAdapter{
         }else{
             listItemView=(ListItemView)convertView.getTag();//利用缓存的View
         }
-        if(mPosition%2==0)
-            listItemView.txtName.setTextColor(Color.GREEN);
-        else
-            listItemView.txtName.setTextColor(Color.RED);
+        if(listItem.size()%2==1){
+            if(position%2==0)
+                listItemView.txtName.setTextColor(Color.GREEN);
+            else
+                listItemView.txtName.setTextColor(Color.RED);
+        }
+        else{
+            if(position%2==1)
+                listItemView.txtName.setTextColor(Color.GREEN);
+            else
+                listItemView.txtName.setTextColor(Color.RED);
+        }
         listItemView.txtName.
                 setText(listItem.get(mPosition).get("content"));
         return convertView;

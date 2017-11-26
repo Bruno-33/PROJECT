@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.media.Image;
 import android.os.Handler;
 import android.os.IBinder;
@@ -21,6 +22,8 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -59,7 +62,7 @@ public class Battle extends AppCompatActivity {
     private RoleAdapterSimple roleadapter1,roleadapter2;
     private LinearLayout relativeLayout;
     private  AlertDialog.Builder dialog;
-    private ImageView player1,blurView,VS;
+    private ImageView player1,player2,blurView,VS;
     private TextView player1_blood,player2_blood,player1_description,player2_description,action1,action2;
     private int player1_blood_num,player2_blood_num,player1_card_num,player2_card_num;
     private boolean TURN;
@@ -67,7 +70,8 @@ public class Battle extends AppCompatActivity {
     private boolean PREPARE;
     private List<Role> dbrole;
     private int CURRENT;
-
+    private Handler mHandler;
+    private int position;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,20 +83,13 @@ public class Battle extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 relativeLayout.setVisibility(View.VISIBLE);
-                //RelativeLayout.LayoutParams my = (RelativeLayout.LayoutParams)player1.getLayoutParams();
-                //my.width = (int)(my.width*1.1);
-
-                dialog.setMessage("游戏结束，你赢了!!!");
-                //dialog.show();
-                map = new LinkedHashMap<>();
-                map.put("content","3333333");
-                dataList.add(0,map);
-                sim_aAdapter.notifyDataSetChanged();
-                listView.smoothScrollToPositionFromTop(0, 0);
+                Animation animation = AnimationUtils.loadAnimation(Battle.this,R.anim.alpha);
+                relativeLayout.startAnimation(animation);
             }
         });
+        Animation animation = AnimationUtils.loadAnimation(this,R.anim.scale1);
+        VS.startAnimation(animation);
     }
-
 
     private  void init(){
         findview();
@@ -128,6 +125,7 @@ public class Battle extends AppCompatActivity {
         rolesView1 = (RecyclerView)findViewById(R.id.battle_recycler1);
         rolesView2 = (RecyclerView)findViewById(R.id.battle_recycler2);
         player1 = (ImageView) findViewById(R.id.player1);
+        player2 = (ImageView) findViewById(R.id.player2);
         action1 = (TextView) findViewById(R.id.action1);
         action2 = (TextView) findViewById(R.id.action2);
         VS = (ImageView)findViewById(R.id.vs);
@@ -142,24 +140,23 @@ public class Battle extends AppCompatActivity {
 
     private void init_recyclerview(){
         rolesView1.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        roleadapter1 = new RoleAdapterSimple(roles1);
+        roleadapter1 = new RoleAdapterSimple(this, roles1);
         rolesView1.setAdapter(roleadapter1);
         cardScaleHelper1 = new CardScaleHelper();
         cardScaleHelper1.attachToRecyclerView(rolesView1);
         roleadapter1.setOnItemClickListener(new RoleAdapterSimple.OnItemClickListener() {
             @Override
-            public void onClick(int position) {
+            public void onClick(int mposition) {
+                position = mposition;
+                mHandler.sendEmptyMessageDelayed(333,1000);
                 map = new LinkedHashMap<>();
-                map.put("content",roles1.get(position).getName());
+                int tmp = (int)(Math.random()*10);
+                map.put("content","你使用了"+roles1.get(position).getName()+",造成"+String.valueOf(tmp)+"点伤害");
                 dataList.add(0,map);
                 sim_aAdapter.notifyDataSetChanged();
-                roles1.remove(position);
                 player1_card_num-=1;
-                roleadapter1.notifyDataSetChanged();
-                rolesView1.setVisibility(View.INVISIBLE);
-                blurView.setVisibility(View.INVISIBLE);
                 player1_description.setText(String.valueOf(player1_card_num));
-                player2_blood_num-=(int)(Math.random()*10);
+                player2_blood_num-=tmp;
                 player2_blood.setText(String.valueOf(player2_blood_num));
                 TURN = true;
                 isgameover();
@@ -172,7 +169,6 @@ public class Battle extends AppCompatActivity {
         rolesView2.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         roleadapter2 = new RoleAdapterSimple(roles2);
         rolesView2.setAdapter(roleadapter2);
-
     }
     void init_laugh(){
         action1.setOnClickListener(new View.OnClickListener(){
@@ -195,7 +191,7 @@ public class Battle extends AppCompatActivity {
         });
     }
     private void prepare(){
-        final Handler mHandler = new Handler()
+         mHandler= new Handler()
         {
             @Override
             public void handleMessage(Message msg) {
@@ -209,6 +205,16 @@ public class Battle extends AppCompatActivity {
                         else{
                             AI_turn();
                         }
+                        break;
+                    case 333:
+                        rolesView1.setVisibility(View.INVISIBLE);
+                        blurView.setVisibility(View.INVISIBLE);
+                        roles1.remove(position);
+                        roleadapter1.notifyDataSetChanged();
+                        rolesView1.smoothScrollToPosition(0);
+                        player2.setImageResource(R.drawable.shu1);
+                        player1.setImageResource(R.drawable.wei);
+                        break;
                 }
             }
         };
@@ -231,10 +237,6 @@ public class Battle extends AppCompatActivity {
     void deal()
     {
         if(player1_card_num<8){
-            RelativeLayout.LayoutParams my = (RelativeLayout.LayoutParams)VS.getLayoutParams();
-            my.width = (int)(my.width*1.2);
-            my.height=(int)(my.height*1.2);
-            VS.setLayoutParams(my);
             roles1.add( 0,dbrole.get((int) (Math.random() * dbrole.size())));
             roleadapter1.notifyDataSetChanged();
 
@@ -248,6 +250,7 @@ public class Battle extends AppCompatActivity {
         }
         else{
             VS.setVisibility(View.INVISIBLE);
+            player1.setImageResource(R.drawable.wei1);
             PREPARE = false;
         }
     }
@@ -261,17 +264,20 @@ public class Battle extends AppCompatActivity {
                 TURN = false;
                 int position = (int)Math.random()*player2_card_num;
                 map = new LinkedHashMap<>();
-                map.put("content",roles2.get(position).getName());
+                int tmp = (int)(Math.random()*10);
+                map.put("content","对手使用了"+roles2.get(position).getName()+",造成"+String.valueOf(tmp)+"点伤害");
                 dataList.add(0,map);
                 sim_aAdapter.notifyDataSetChanged();
                 roles2.remove(position);
                 player2_card_num-=1;
                 roleadapter2.notifyDataSetChanged();
                 player2_description.setText(String.valueOf(player2_card_num));
-                player1_blood_num-=(int)(Math.random()*10);
+                player1_blood_num-=tmp;
                 player1_blood.setText(String.valueOf(player1_blood_num));
                 rolesView1.setVisibility(View.VISIBLE);
                 blurView.setVisibility(View.VISIBLE);
+                player1.setImageResource(R.drawable.wei1);
+                player2.setImageResource(R.drawable.shu);
                 isgameover();
             }
         }
